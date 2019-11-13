@@ -1,0 +1,113 @@
+import Vue from 'vue'
+import Vuex from 'vuex'
+import {dbOrderAdd, dbShoeAdd} from "../firebase";
+import firebase from 'firebase'
+import 'firebase/firestore'
+
+Vue.use(Vuex)
+
+export default new Vuex.Store({
+  state: {
+      basketItems: [],
+      menuItems:[],
+      orderItems:[],
+      currentUser: null,
+      basketNumber:0,
+  },
+  mutations: {
+      addCheckoutItem: (state, basketItems) => {
+          dbOrderAdd.add({
+              orderNumber:2,
+              status:"not started",
+              orderLines: state.basketItems
+          })
+      },
+    addBasketItems:(state, basketItems ) => {
+      if (basketItems instanceof Array) {
+    basketItems.forEach(item => {
+        state.basketNumber++;
+      if(state.basketItems.find(itemInArray => item.name === itemInArray.name))
+      {
+        item = state.basketItems.find(itemInArray => item.name === itemInArray.name);
+        item.quantity++;
+      }
+      else{
+          console.log(item.size);
+        state.basketItems.push({
+          name:item.name,
+          price: item.price,
+            size: item.size,
+            quantity:1,
+        })
+      }
+    })
+      }
+      },
+      BasketCountDown:(state) =>
+          {
+              state.basketNumber--;
+          },
+    userStatus(state,user) {
+      if(user){
+        state.currentUser = user
+      }
+      else {
+        state.currentUser = null
+      }
+    },
+
+    setMenuItems: state => {
+      let menuItems = [];
+      dbShoeAdd.onSnapshot((snapshotItems) => {
+            menuItems = [];
+            snapshotItems.forEach((doc) => {
+              var menuItemData = doc.data();
+              menuItems.push({
+                ...menuItemData,
+                id: doc.id
+              })
+            });
+            state.menuItems = menuItems
+          }
+      )
+    },
+
+      setOrderItems: state => {
+          let orderItems = [];
+          dbOrderAdd.onSnapshot((snapshotItems) => {
+                  orderItems = [];
+                  snapshotItems.forEach((doc) => {
+                      var orderItemData = doc.data();
+                      orderItems.push({
+                          ...orderItemData,
+                          id: doc.id
+                      })
+                  });
+                  state.orderItems = orderItems
+              }
+          )
+      },
+  },
+
+  actions: {
+    setCheckoutItem(context){
+      context.commit('addCheckoutItem')
+    },
+    setUser(context, user) {
+      context.commit('userStatus',user)
+    },
+    setMenuItems: context => {
+        context.commit('setMenuItems')
+    },
+      setOrderItems: context => {
+          context.commit('setOrderItems')
+      },
+  },
+  getters: {
+      getBasketItems: state => state.basketItems,
+      currentUser: state => state.currentUser,
+      getMenuItems: state => state.menuItems,
+      getOrderItems: state => state.orderItems,
+      getBasketNumber:state => state.basketNumber,
+  }
+})
